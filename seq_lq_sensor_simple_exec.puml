@@ -1,0 +1,23 @@
+@startuml
+PSCAgent -> LQMgr: Notify(event_type, event)
+
+LQMgr -> LQTimeStampKeeper: GetCurrentTimeStamp()
+LQTimeStampKeeper -> LQMgr: currentTimeStamp
+
+LQMgr -> LQRequestGetter: Get(currentTimeStamp)
+LQRequestGetter -> LQMgr: NewQueries(lqRequests)
+
+LQMgr -> LQTimeStampKeeper : NewQueries(lqRequests)
+
+    loop for_each lqRequest
+        LQMgr -> LQRunner: Enqueue(lqRequest)
+    end
+
+LQRunner -> LQMgr : CompletedQuery(lqRequest)
+
+LQMgr -> LQResultSender : Enqueue(lqResult)
+LQResultSender -> LQMgr : ResultSent(lqResult)
+
+LQMgr -> LQTimeStampKeeper : ProcessedQuery(lqRequest)
+
+@enduml

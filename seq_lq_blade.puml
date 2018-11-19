@@ -1,0 +1,21 @@
+@startuml
+UI -> Backend : New Live Query
+Sensor -> Backend : Checkin (LQ timestamp)
+Backend -> Sensor : Checkin Response hint LQ
+Sensor -> LQ_Blade : Notify
+LQ_Blade -> Backend : HTTP GET (livequery/requests)
+Backend -> LQ_Blade : HTTP GET Reply (Batch of live queries)
+
+loop (for each livequery)
+    create osqueryi
+    LQ_Blade -> osqueryi : livequery
+    LQ_Blade -> Backend : HTTP Post (livequery/{requestId}/results
+end
+Sensor -> Backend : Checkin (New LQ timestamp)
+
+participant osqueryi order 50
+participant LQ_Blade order 40
+participant Sensor order 30
+participant Backend order 20
+participant UI order 10
+@enduml
