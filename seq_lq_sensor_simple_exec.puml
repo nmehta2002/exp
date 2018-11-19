@@ -4,8 +4,11 @@ PSCAgent -> LQMgr: Notify(event_type, event)
 LQMgr -> LQTimeStampKeeper: GetCurrentTimeStamp()
 LQTimeStampKeeper -> LQMgr: currentTimeStamp
 
-LQMgr -> LQRequestGetter: Get(currentTimeStamp)
-LQRequestGetter -> LQMgr: NewQueries(lqRequests)
+LQMgr -> LQHttpEngine: EnqueueGetRequest(currentTimeStamp)
+LQHttpEngine -> LQRequestGetter: Get(currentTimeStamp)
+LQRequestGetter -> LQHttpEngine : lqRequests
+
+LQHttpEngine -> LQMgr: NewQueries(lqRequests)
 
 LQMgr -> LQTimeStampKeeper : NewQueries(lqRequests)
 
@@ -13,10 +16,12 @@ LQMgr -> LQTimeStampKeeper : NewQueries(lqRequests)
         LQMgr -> LQRunner: Enqueue(lqRequest)
     end
 
-LQRunner -> LQMgr : CompletedQuery(lqRequest)
+LQRunner -> LQMgr : CompletedQuery(lqRequest, lqResult)
 
-LQMgr -> LQResultSender : Enqueue(lqResult)
-LQResultSender -> LQMgr : ResultSent(lqResult)
+LQMgr -> LQHttpEngine : EnqueueSendResult(lqResult)
+LQHttpEngine -> LQResultSender : Send(lqResult)
+LQResultSender -> LQHttpEngine : ResultSent(lqResult)
+LQHttpEngine -> LQMgr : ResultSent(lqResult)
 
 LQMgr -> LQTimeStampKeeper : ProcessedQuery(lqRequest)
 
