@@ -12,10 +12,6 @@ class LQResult
 
 class LQMgr
 {
-    + LQMgr(shared<LQRunner> dispatcher,
-            shared_ptr<LQTimeStampKeeper> timeStampKeeper,
-            shared_ptr<LQHttpEngine> httpEngine,
-            shared_ptr<LQRunner> lqRunner)
     ..
     //
     // Notifies the LQMgr, about a hint received from the backend.
@@ -30,23 +26,6 @@ class LQMgr
     //
     +Timestamp GetCurrentTimeStamp()
     ==
-    ..
-    //
-    // Implementation of LQHttpEngineListener
-    //
-    +void NewQueries(vector<shared_ptr<LQRequest>> lqRequests) overrides
-
-    +void ResultSent(shared_ptr<LQResult> lqResult)
-
-    ==
-    ..
-    //
-    // Implementation of LQRunnerListener
-    //
-
-    +void CompletedQuery(shared_ptr<LQRequest> lqRequest,
-                         shared_ptr<LQResult>  lqResult) overrides
-    ==
 
     +void Shutdown()
 }
@@ -54,25 +33,17 @@ class LQMgr
 
 class LQTimeStampKeeper
 {
-    +void ProcessedQuery(shared_ptr<LQRequest> lqRequest)
+    +void ProcessedQuery(shared_ptr<LQResult> lqResult)
 
-    +void NewQueries(vector<shared_ptr<LQRequest>> lqRequests)
+    +void UpdateKeeperNewRequestTimeStamp(vector<shared_ptr<LQRequest>> lqRequests)
 
     +Timestamp GetCurrentTimeStamp()
-}
-
-interface LQRunnerEventListener
-{
-    +void CompletedQuery(shared_ptr<LQRequest> lqRequest,
-                    shared_ptr<LQResult>  lqResult)
 }
 
 
 class LQRequestGetter
 {
-    +LQRequestGetter(shared_ptr<LQRequestGetterListener> fetchListener)
-
-    +void Get(TimeStamp createdAfter)
+    +vector<shared_ptr<LQRequest>> Get(TimeStamp createdAfter)
 
     -- private data --
      - TimeStamp newestKnownQuery
@@ -81,57 +52,14 @@ class LQRequestGetter
 
 class LQRunner
 {
-    ..
-    //
-    // Register a listener to listen on LQRequest completion events.
-    //
-    +LQRunner(shared_ptr<LQRunnerEventListener> listener)
-    ==
-
-    +void Enqueue(shared_ptr<LQRequest> lqRequest)
-
-    ..
-    //
-    // Cancel queries already scheduled with the Runner.
-    // A call to this routine does not gurantee that the query will be cancelled,
-    // the query will not be cancelled if its already running.
-    //
-    +void Cancel(shared_ptr<LQRequest> LQRequest)
-    ==
-
-    +void Shutdown()
-}
-
-interface LQHttpEngineListener
-{
-    +void NewQueries(vector<shared_ptr<LQRequest>> lqRequests)
-
-    +void ResultSent(shared_ptr<LQResult> lqResult)
+    +void Run(shared_ptr<LQRequest> lqRequest)
 }
 
 class LQHttpEngine
 {
-    ..
-    //
-    // Register a listener to listen on engine events.
-    //
-    +LQHttpEngine(shared_ptr<LQHttpEngineListener> listener)
-    ==
+    +vector<shared_ptr<LQRequest>> GetRequest(Timestamp createdAfter)
 
-    ..
-    //
-    // Queues a get request.
-    //
-    +void EnqueueGetRequest(Timestamp createdAfter)
-    ==
-
-    ..
-    //
-    // Queues a send result.
-    //
-    +void EnqueueSendResult(shared_ptr<LQResult> lqResult)
-    ==
-
+    +void SendResult(shared_ptr<LQResult> lqResult)
 }
 
 class LQResultSender
@@ -144,8 +72,7 @@ interface Subscriber
     +void Notify(event_type, event);
 }
 
-LQHttpEngineListener <|-- LQMgr
-LQRunnerEventListener <|-- LQMgr
+
 Subscriber <|-- LQMgr
 
 LQMgr o-- LQTimeStampKeeper

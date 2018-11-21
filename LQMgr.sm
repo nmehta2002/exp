@@ -1,0 +1,78 @@
+
+
+
+%start LQMgrMap::WaitForNotify
+%class LQMgr
+%header <LQMgr.h>
+
+%map LQMgrMap
+
+%%
+
+// Simple implementation.
+// Does not support cancelling queries that are already in the process of running.
+// Every query run is immediately followed by a response, and no other
+// queries are run before we actually get a good response.
+
+WaitForNotify
+Entry { SEWaitForNotify(); }
+{
+
+    Notify                     GetRequests              { }
+
+    PendingNotify              GetRequests              { TAResetPendingNotify(); }
+}
+
+GetRequests
+Entry { SEGetRequest(); }
+{
+    GetComplete                 ProcessGetResponse      { TAUpdateKeeperNewRequestTimeStamp(); }
+
+    Notify                      nil                     { TASetPendingNotify(); }
+
+}
+
+ProcessGetResponse
+Entry { SEProcessGetResponse(); }
+{
+    NewQuery(query)             ProcessGetResponse      { TAQueue(); }
+
+    CancelQuery(query)[ctxt.TGIfInQueue()]
+                                ProcessGetResponse      { TASendResult(); }
+
+    CancelQuery(query)          ProcessGetResponse      { }
+
+
+    NoMoreQueries               RunNextQuery            { }
+
+}
+
+RunNextQuery
+Entry { SERunNextQuery(); }
+{
+    QueryRunning                QueryRunning            { }
+
+    NoNextQuery                 WaitForNotify           { }
+}
+
+QueryRunning
+Entry { SEQueryRunning(); }
+{
+    QueryComplete               SendResult              { }
+
+    Notify                      nil                     { TASetPendingNotify(); }
+
+}
+
+SendResult
+Entry { SESendResult(); }
+{
+    SendComplete[ctxt.TGIfInQueue()]
+                                WaitForNotify           { TAUpdateKeeperProcessedQuery(); }
+
+    SendComplete                RunNextQuery            { TAUpdateKeeperProcessedQuery(); }
+
+    Notify                      nil                     { TASetPendingNotify(); }
+}
+
+%%

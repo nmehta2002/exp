@@ -1,28 +1,34 @@
 @startuml
+note over LQMgr: state - WaitForNotify
 PSCAgent -> LQMgr: Notify(event_type, event)
 
+note over LQMgr: state: GetRequests
 LQMgr -> LQTimeStampKeeper: GetCurrentTimeStamp()
 LQTimeStampKeeper -> LQMgr: currentTimeStamp
 
-LQMgr -> LQHttpEngine: EnqueueGetRequest(currentTimeStamp)
+LQMgr -> LQHttpEngine: GetRequest(currentTimeStamp)
 LQHttpEngine -> LQRequestGetter: Get(currentTimeStamp)
 LQRequestGetter -> LQHttpEngine : lqRequests
 
-LQHttpEngine -> LQMgr: NewQueries(lqRequests)
+LQHttpEngine -> LQMgr: lqRequests
 
-LQMgr -> LQTimeStampKeeper : NewQueries(lqRequests)
+LQMgr -> LQTimeStampKeeper : UpdateKeeperNewRequestTimeStamp(lqRequests)
 
+note over LQMgr: state: ProcessGetResponse\nRunNextQuery\nSendResult
     loop for_each lqRequest
-        LQMgr -> LQRunner: Enqueue(lqRequest)
+        LQMgr -> LQRunner: Run(lqRequest)
+        LQRunner -> LQMgr : lqResult
+        LQMgr -> LQHttpEngine : SendResult(lqResult)
+        LQHttpEngine -> LQResultSender: Send(lqResult)
+        LQMgr -> LQTimeStampKeeper : ProcessedQuery(lqResult)
     end
 
-LQRunner -> LQMgr : CompletedQuery(lqRequest, lqResult)
-
-LQMgr -> LQHttpEngine : EnqueueSendResult(lqResult)
-LQHttpEngine -> LQResultSender : Send(lqResult)
-LQResultSender -> LQHttpEngine : ResultSent(lqResult)
-LQHttpEngine -> LQMgr : ResultSent(lqResult)
-
-LQMgr -> LQTimeStampKeeper : ProcessedQuery(lqRequest)
+participant PSCAgent order 10
+participant LQMgr order 20
+participant LQTimeStampKeeper order 30
+participant LQRunner order 40
+participant LQHttpEngine order 50
+participant LQRequestGetter order 60
+participant LQResultSender order 70
 
 @enduml
